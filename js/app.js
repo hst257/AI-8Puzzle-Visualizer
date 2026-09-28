@@ -408,7 +408,7 @@ async function runComparison() {
 
 function comparisonRow(row) {
   const memoryClass = row.memoryBytes < 50_000 ? "Low" : row.memoryBytes < 500_000 ? "Medium" : "High";
-  return `<tr><td>${algorithmInfo[row.algorithm].short} <small>${ALGORITHM_NAMES[row.algorithm]}</small></td><td><span class="result-chip ${row.found ? "" : "fail"}">${row.found ? "Found" : row.reason === "cutoff" ? "Cutoff" : "Not found"}</span></td><td>${row.expanded.toLocaleString()}</td><td>${row.moves ?? "—"}</td><td>${formatTime(row.timeMs)}</td><td title="${formatMemory(row.memoryBytes)}">${memoryClass}</td></tr>`;
+  return `<tr><td data-label="Algorithm">${algorithmInfo[row.algorithm].short} <small>${ALGORITHM_NAMES[row.algorithm]}</small></td><td data-label="Result"><span class="result-chip ${row.found ? "" : "fail"}">${row.found ? "Found" : row.reason === "cutoff" ? "Cutoff" : "Not found"}</span></td><td data-label="Nodes expanded">${row.expanded.toLocaleString()}</td><td data-label="Moves">${row.moves ?? "—"}</td><td data-label="Time">${formatTime(row.timeMs)}</td><td data-label="Memory" title="${formatMemory(row.memoryBytes)}">${memoryClass}</td></tr>`;
 }
 
 function renderAlgorithmInfo(selected = "bfs") {
