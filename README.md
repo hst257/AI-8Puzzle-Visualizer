@@ -4,9 +4,7 @@ An interactive, browser-based visualization of six state-space search algorithms
 
 ## Live website
 
-After publishing, add your URL here:
-
-`https://YOUR-USERNAME.github.io/AI-8Puzzle-Visualizer/`
+`https://hst257.github.io/AI-8Puzzle-Visualizer/`
 
 ## Features
 
@@ -48,8 +46,8 @@ The blank tile is excluded from both heuristics.
 
 ## Student details
 
-- **Student:** Your Name
-- **Registration number:** Your Registration No.
+- **Student:** Harshit Sharma Thakur
+- **Registration number:** 24BCE0437
 - **Course:** Artificial Intelligence
 - **Assignment:** 8-Puzzle Search Algorithm Visualizer
 
