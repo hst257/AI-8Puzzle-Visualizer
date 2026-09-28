@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive 8-puzzle search algorithm visualizer for BFS, DFS, DLS, IDDLS, GBFS, and A*.">
+  <title>8-Puzzle Search Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="container-xl nav-shell" aria-label="Main navigation">
+      <a class="brand" href="#home" data-page="home" aria-label="8-Puzzle Search Lab home">
+        <span class="brand-mark"><i></i><i></i><i></i><i></i></span>
+        <span>SEARCH<span class="brand-accent">/08</span></span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menu</button>
+      <div class="main-nav" id="main-nav">
+        <a href="#home" data-page="home" class="active">Home</a>
+        <a href="#solver" data-page="solver">Visualizer</a>
+        <a href="#compare" data-page="compare">Compare</a>
+        <a href="#learn" data-page="learn">Algorithms</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page active" id="home" aria-labelledby="home-title">
+      <div class="container-xl hero-grid">
+        <div class="hero-copy">
+          <div class="eyebrow"><span></span> Artificial Intelligence · Search Assignment</div>
+          <h1 id="home-title">Find the path.<br><em>See the search.</em></h1>
+          <p class="hero-lead">An interactive laboratory for exploring how six search strategies navigate the classic 8-puzzle state space.</p>
+          <div class="hero-actions">
+            <a class="btn-primary-lab" href="#solver" data-page="solver">Open visualizer <span>→</span></a>
+            <a class="btn-quiet" href="#learn" data-page="learn">Study algorithms</a>
+          </div>
+          <dl class="student-strip">
+            <div><dt>Student</dt><dd contenteditable="true" title="Click to edit">Harshit Sharma Thakur</dd></div>
+            <div><dt>Registration</dt><dd contenteditable="true" title="Click to edit">24BCE0437</dd></div>
+            <div><dt>Course</dt><dd contenteditable="true" title="Click to edit">Artificial Intelligence</dd></div>
+          </dl>
+        </div>
+        <div class="hero-visual" aria-label="Animated 8-puzzle illustration">
+          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+          <div class="demo-board">
+            <span style="--n:0">1</span><span style="--n:1">2</span><span style="--n:2">3</span>
+            <span style="--n:3">8</span><span class="blank" style="--n:4"></span><span style="--n:5">4</span>
+            <span style="--n:6">7</span><span style="--n:7">6</span><span style="--n:8">5</span>
+          </div>
+          <div class="visual-tag tag-a">GOAL STATE</div>
+          <div class="visual-tag tag-b">9! / 2 states</div>
+        </div>
+      </div>
+      <div class="container-xl intro-band">
+        <div class="section-number">01</div>
+        <div>
+          <p class="kicker">The problem</p>
+          <h2>One empty space.<br>Thousands of decisions.</h2>
+        </div>
+        <p>The 8-puzzle is a 3 × 3 sliding-tile puzzle. A legal move slides one numbered tile into the blank space. The challenge is to transform an initial arrangement into a chosen goal arrangement—while a search algorithm decides which state to explore next.</p>
+      </div>
+      <div class="container-xl feature-grid">
+        <article><span>01</span><h3>Build</h3><p>Enter any valid start and goal state, or generate a guaranteed solvable puzzle.</p></article>
+        <article><span>02</span><h3>Observe</h3><p>Step through expansions, successors, frontier, explored set, depth, and evaluation values.</p></article>
+        <article><span>03</span><h3>Compare</h3><p>Run all six strategies against the same instance and inspect their trade-offs.</p></article>
+      </div>
+    </section>
+
+    <section class="page" id="solver" aria-labelledby="solver-title">
+      <div class="container-xl page-heading">
+        <div><p class="kicker">Interactive workspace</p><h1 id="solver-title">Search visualizer</h1></div>
+        <p>Configure the problem, choose a strategy, and watch the state space unfold.</p>
+      </div>
+
+      <div class="container-xl solver-layout">
+        <aside class="control-panel panel">
+          <div class="panel-heading"><span>01</span><h2>Puzzle setup</h2></div>
+          <div class="state-input-grid">
+            <fieldset>
+              <legend>Initial state</legend>
+              <div class="mini-grid" id="initial-input" aria-label="Initial state inputs"></div>
+            </fieldset>
+            <fieldset>
+              <legend>Goal state</legend>
+              <div class="mini-grid" id="goal-input" aria-label="Goal state inputs"></div>
+            </fieldset>
+          </div>
+          <div class="button-row compact">
+            <button class="btn-outline-lab" id="randomize-btn" type="button">↻ Random solvable</button>
+            <button class="text-button" id="swap-btn" type="button">Swap states</button>
+          </div>
+          <div class="divider"></div>
+          <div class="panel-heading"><span>02</span><h2>Search strategy</h2></div>
+          <label class="field-label" for="algorithm-select">Algorithm</label>
+          <select id="algorithm-select" class="form-select lab-select">
+            <option value="bfs">Breadth-First Search (BFS)</option>
+            <option value="dfs">Depth-First Search (DFS)</option>
+            <option value="dls">Depth-Limited Search (DLS)</option>
+            <option value="iddls" selected>Iterative Deepening DLS (IDDLS)</option>
+            <option value="gbfs">Greedy Best-First Search (GBFS)</option>
+            <option value="astar">A* Search</option>
+          </select>
+          <div id="depth-field" class="conditional-field">
+            <label class="field-label" for="depth-limit">Depth limit</label>
+            <input id="depth-limit" class="form-control lab-input" type="number" value="20" min="0" max="80">
+          </div>
+          <div id="heuristic-field" class="conditional-field hidden">
+            <label class="field-label" for="heuristic-select">Heuristic</label>
+            <select id="heuristic-select" class="form-select lab-select">
+              <option value="manhattan">Manhattan distance</option>
+              <option value="misplaced">Misplaced tiles</option>
+            </select>
+          </div>
+          <p class="algorithm-note" id="algorithm-note"></p>
+          <div id="validation-message" class="notice" role="status" aria-live="polite"></div>
+          <button class="btn-primary-lab full" id="run-btn" type="button">Run search <span>→</span></button>
+        </aside>
+
+        <div class="visualizer-column">
+          <section class="panel stage-panel" aria-labelledby="stage-title">
+            <div class="stage-topline">
+              <div><p class="kicker">Live expansion</p><h2 id="stage-title">Current search state</h2></div>
+              <span class="status-pill idle" id="run-status"><i></i> Ready</span>
+            </div>
+            <div class="board-stage">
+              <div class="state-card side-state"><span>Initial</span><div class="puzzle-board small" id="initial-board"></div></div>
+              <div class="state-card main-state">
+                <span id="current-caption">Current node</span>
+                <div class="puzzle-board" id="current-board"></div>
+                <div class="move-badge" id="move-badge">Step 0</div>
+              </div>
+              <div class="state-card side-state"><span>Goal</span><div class="puzzle-board small" id="goal-board"></div></div>
+            </div>
+            <div class="transport" aria-label="Playback controls">
+              <button type="button" id="reset-btn" title="Reset playback">↺</button>
+              <button type="button" id="prev-btn" title="Previous step">←</button>
+              <button type="button" id="play-btn" class="play" title="Play or pause">▶</button>
+              <button type="button" id="next-btn" title="Next step">→</button>
+              <label for="speed-select">Speed
+                <select id="speed-select"><option value="1200">0.5×</option><option value="650" selected>1×</option><option value="280">2×</option><option value="100">4×</option></select>
+              </label>
+            </div>
+          </section>
+
+          <section class="metric-grid" aria-label="Search metrics">
+            <article><span>Generated</span><strong id="metric-generated">0</strong></article>
+            <article><span>Expanded</span><strong id="metric-expanded">0</strong></article>
+            <article><span>Depth</span><strong id="metric-depth">0</strong></article>
+            <article><span>Path cost</span><strong id="metric-cost">0</strong></article>
+            <article><span>h(n)</span><strong id="metric-h">—</strong></article>
+            <article><span>f(n)</span><strong id="metric-f">—</strong></article>
+          </section>
+
+          <section class="panel process-panel">
+            <div class="process-grid">
+              <div><p class="list-label">Generated successors</p><div class="successor-list" id="successor-list"><p class="empty-copy">Run a search to inspect successors.</p></div></div>
+              <div><p class="list-label">Frontier · Open list</p><div class="state-list" id="frontier-list">—</div></div>
+              <div><p class="list-label">Explored · Closed list</p><div class="state-list" id="explored-list">—</div></div>
+            </div>
+            <div class="node-detail" id="node-detail">Parent: — &nbsp;·&nbsp; Move: — &nbsp;·&nbsp; g(n): 0</div>
+          </section>
+
+          <section class="panel summary-panel hidden" id="summary-panel">
+            <div class="summary-head"><div><p class="kicker">Search complete</p><h2 id="summary-title">Solution found</h2></div><span id="summary-icon">✓</span></div>
+            <div class="summary-stats" id="summary-stats"></div>
+            <div class="solution-heading"><h3>Final solution path</h3><button class="text-button" id="animate-solution-btn" type="button">Animate path →</button></div>
+            <div class="solution-path" id="solution-path"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="compare" aria-labelledby="compare-title">
+      <div class="container-xl page-heading">
+        <div><p class="kicker">Controlled experiment</p><h1 id="compare-title">Algorithm comparison</h1></div>
+        <p>Six strategies. One puzzle. Compare completeness, efficiency, path length, and approximate memory.</p>
+      </div>
+      <div class="container-xl panel comparison-panel">
+        <div class="comparison-toolbar">
+          <div><strong>Current solver puzzle</strong><span id="comparison-puzzle-label">Uses the initial and goal states from the visualizer.</span></div>
+          <button class="btn-primary-lab" id="compare-btn" type="button">Run all algorithms <span>→</span></button>
+        </div>
+        <div class="table-responsive">
+          <table class="comparison-table">
+            <thead><tr><th>Algorithm</th><th>Result</th><th>Nodes expanded</th><th>Moves</th><th>Time</th><th>Memory</th></tr></thead>
+            <tbody id="comparison-body">
+              <tr><td colspan="6" class="table-empty">Run the comparison to populate results.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="fine-print">DLS uses the configured depth limit. Time and memory are browser-side estimates and vary by device.</p>
+      </div>
+    </section>
+
+    <section class="page" id="learn" aria-labelledby="learn-title">
+      <div class="container-xl page-heading">
+        <div><p class="kicker">Reference guide</p><h1 id="learn-title">Six ways to search</h1></div>
+        <p>Understand what each strategy prioritizes—and what it gives up in return.</p>
+      </div>
+      <div class="container-xl algorithm-tabs" id="algorithm-tabs"></div>
+      <div class="container-xl panel algorithm-detail" id="algorithm-detail"></div>
+      <div class="container-xl heuristic-section">
+        <div><p class="kicker">Informed search</p><h2>Heuristics</h2></div>
+        <article><span class="formula">h₁(n)</span><div><h3>Misplaced tiles</h3><p>Counts numbered tiles not in their goal positions. Simple and admissible, but it ignores how far each tile must travel.</p></div></article>
+        <article><span class="formula">h₂(n)</span><div><h3>Manhattan distance</h3><p>Sums each tile’s horizontal and vertical distance from its goal position. More informative and still admissible for the 8-puzzle.</p></div></article>
+      </div>
+    </section>
+  </main>
+
+  <footer><div class="container-xl"><span>8-Puzzle Search Lab</span><span>Built with HTML5 · CSS3 · JavaScript ES6 · Bootstrap</span></div></footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
