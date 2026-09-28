@@ -168,7 +168,34 @@
           <section class="panel summary-panel hidden" id="summary-panel">
             <div class="summary-head"><div><p class="kicker">Search complete</p><h2 id="summary-title">Solution found</h2></div><span id="summary-icon">✓</span></div>
             <div class="summary-stats" id="summary-stats"></div>
-            <div class="solution-heading"><h3>Final solution path</h3><button class="text-button" id="animate-solution-btn" type="button">Animate path →</button></div>
+            <div class="solution-heading"><h3>Final solution path</h3><button class="animate-path-button" id="animate-solution-btn" type="button"><span>▶</span> Animate solution</button></div>
+            <div class="solution-player hidden" id="solution-player" aria-live="polite">
+              <div class="solution-player-copy">
+                <p class="kicker">Solution playback</p>
+                <h3 id="solution-player-title">Following the optimal path</h3>
+                <p id="solution-player-description">Watch each legal blank-tile move from the initial state to the goal.</p>
+                <div class="solution-progress-meta"><span id="solution-step-label">Step 0 of 0</span><strong id="solution-move-label">Start</strong></div>
+                <div class="solution-progress" aria-hidden="true"><span id="solution-progress-bar"></span></div>
+                <div class="solution-controls" aria-label="Solution playback controls">
+                  <button type="button" id="solution-restart-btn" title="Restart solution">↺</button>
+                  <button type="button" id="solution-prev-btn" title="Previous solution step">←</button>
+                  <button type="button" id="solution-play-btn" class="solution-play" title="Play or pause solution">Ⅱ</button>
+                  <button type="button" id="solution-next-btn" title="Next solution step">→</button>
+                  <label for="solution-speed-select">Speed
+                    <select id="solution-speed-select">
+                      <option value="1200">0.5×</option>
+                      <option value="700" selected>1×</option>
+                      <option value="350">2×</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div class="solution-player-visual">
+                <div class="solution-board-glow"></div>
+                <div class="puzzle-board solution-player-board" id="solution-player-board"></div>
+                <span class="solution-goal-badge" id="solution-goal-badge">In progress</span>
+              </div>
+            </div>
             <div class="solution-path" id="solution-path"></div>
           </section>
         </div>

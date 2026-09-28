@@ -22,6 +22,11 @@ const elements = {
   validation: $("#validation-message"), status: $("#run-status"), moveBadge: $("#move-badge"),
   summary: $("#summary-panel"), summaryTitle: $("#summary-title"), summaryIcon: $("#summary-icon"),
   summaryStats: $("#summary-stats"), solutionPath: $("#solution-path"),
+  solutionPlayer: $("#solution-player"), solutionPlayerBoard: $("#solution-player-board"),
+  solutionStepLabel: $("#solution-step-label"), solutionMoveLabel: $("#solution-move-label"),
+  solutionProgressBar: $("#solution-progress-bar"), solutionGoalBadge: $("#solution-goal-badge"),
+  solutionPlay: $("#solution-play-btn"), solutionSpeed: $("#solution-speed-select"),
+  animateSolution: $("#animate-solution-btn"),
   generated: $("#metric-generated"), expanded: $("#metric-expanded"), depthMetric: $("#metric-depth"),
   cost: $("#metric-cost"), h: $("#metric-h"), f: $("#metric-f"),
   successors: $("#successor-list"), frontier: $("#frontier-list"), explored: $("#explored-list"),
@@ -53,6 +58,9 @@ let playbackIndex = 0;
 let timer = null;
 let playing = false;
 let lastRenderedState = DEFAULT_INITIAL.slice();
+let solutionTimer = null;
+let solutionPlaying = false;
+let solutionIndex = 0;
 
 function buildInputs(container, values) {
   container.replaceChildren();
@@ -178,6 +186,95 @@ function stopPlayback() {
   elements.play.title = "Resume";
 }
 
+function stopSolutionPlayback(completed = false) {
+  if (solutionTimer) clearTimeout(solutionTimer);
+  solutionTimer = null;
+  solutionPlaying = false;
+  elements.solutionPlay.textContent = completed ? "↺" : "▶";
+  elements.solutionPlay.title = completed ? "Replay solution" : "Resume solution";
+}
+
+function renderSolutionStep(index) {
+  if (!result?.path?.length) return;
+  solutionIndex = Math.max(0, Math.min(result.path.length - 1, index));
+  const step = result.path[solutionIndex];
+  const previous = solutionIndex > 0 ? result.path[solutionIndex - 1].state : null;
+  renderBoard(elements.solutionPlayerBoard, step.state, previous);
+  renderBoard(elements.currentBoard, step.state, lastRenderedState);
+  lastRenderedState = step.state.slice();
+
+  const finalIndex = result.path.length - 1;
+  const complete = solutionIndex === finalIndex;
+  const progress = finalIndex === 0 ? 100 : (solutionIndex / finalIndex) * 100;
+  elements.solutionStepLabel.textContent = `Step ${solutionIndex} of ${finalIndex}`;
+  elements.solutionMoveLabel.textContent = complete ? "Goal reached" : solutionIndex === 0 ? "Start" : `${step.move} move`;
+  elements.solutionProgressBar.style.width = `${progress}%`;
+  elements.solutionGoalBadge.textContent = complete ? "Goal reached ✓" : "In progress";
+  elements.solutionGoalBadge.classList.toggle("complete", complete);
+
+  $$(".path-step", elements.solutionPath).forEach((pathStep, pathIndex) => pathStep.classList.toggle("active", pathIndex === solutionIndex));
+  const activeStep = $$(".path-step", elements.solutionPath)[solutionIndex];
+  if (activeStep) {
+    elements.solutionPath.scrollTo({
+      left: Math.max(0, activeStep.offsetLeft - elements.solutionPath.clientWidth / 2 + activeStep.clientWidth / 2),
+      behavior: "smooth"
+    });
+  }
+}
+
+function scheduleSolutionStep() {
+  if (!solutionPlaying || !result?.path?.length) return;
+  if (solutionIndex >= result.path.length - 1) {
+    stopSolutionPlayback(true);
+    elements.animateSolution.innerHTML = "<span>↺</span> Replay animation";
+    return;
+  }
+  solutionTimer = setTimeout(() => {
+    renderSolutionStep(solutionIndex + 1);
+    scheduleSolutionStep();
+  }, Number(elements.solutionSpeed.value));
+}
+
+function playSolution({ restart = false } = {}) {
+  if (!result?.found || !result.path.length) return;
+  stopPlayback();
+  if (restart || solutionIndex >= result.path.length - 1) solutionIndex = 0;
+  elements.solutionPlayer.classList.remove("hidden");
+  renderSolutionStep(solutionIndex);
+  solutionPlaying = true;
+  elements.solutionPlay.textContent = "Ⅱ";
+  elements.solutionPlay.title = "Pause solution";
+  elements.animateSolution.innerHTML = "<span>↺</span> Restart animation";
+  scheduleSolutionStep();
+}
+
+function openSolutionPlayer() {
+  if (!result?.found) return;
+  stopSolutionPlayback();
+  solutionIndex = 0;
+  elements.solutionPlayer.classList.remove("hidden");
+  renderSolutionStep(0);
+  elements.solutionPlayer.scrollIntoView({ behavior: "smooth", block: "center" });
+  playSolution();
+}
+
+function setupControlPanelScroll() {
+  const panel = $(".control-panel");
+  panel.addEventListener("wheel", (event) => {
+    if (!window.matchMedia("(min-width: 821px)").matches || event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+    const maximum = panel.scrollHeight - panel.clientHeight;
+    if (maximum <= 1) return;
+
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? panel.clientHeight : 1;
+    const requested = panel.scrollTop + event.deltaY * unit;
+    const next = Math.max(0, Math.min(maximum, requested));
+    const remainder = requested - next;
+    panel.scrollTop = next;
+    if (Math.abs(remainder) > 0.5) window.scrollBy({ top: remainder, left: 0, behavior: "auto" });
+    event.preventDefault();
+  }, { passive: false });
+}
+
 function scheduleNext() {
   if (!playing) return;
   if (playbackIndex >= playbackEvents.length - 1) {
@@ -230,6 +327,10 @@ function showSummary(searchResult) {
     ["Approx. memory", formatMemory(searchResult.memoryBytes)], ["Algorithm", ALGORITHM_NAMES[elements.algorithm.value]]
   ];
   elements.summaryStats.innerHTML = stats.map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join("");
+  stopSolutionPlayback();
+  solutionIndex = 0;
+  elements.solutionPlayer.classList.add("hidden");
+  elements.animateSolution.innerHTML = "<span>▶</span> Animate solution";
   elements.solutionPath.replaceChildren();
   if (!searchResult.path.length) {
     elements.solutionPath.innerHTML = '<p class="empty-copy">No solution path is available for this run.</p>';
@@ -244,7 +345,11 @@ function showSummary(searchResult) {
     const caption = document.createElement("p");
     caption.textContent = index === 0 ? "Step 0 · Start" : `Step ${index} · ${step.move}`;
     wrapper.append(board, caption);
-    wrapper.addEventListener("click", () => renderBoard(elements.currentBoard, step.state, lastRenderedState));
+    wrapper.addEventListener("click", () => {
+      stopSolutionPlayback();
+      elements.solutionPlayer.classList.remove("hidden");
+      renderSolutionStep(index);
+    });
     elements.solutionPath.append(wrapper);
   });
 }
@@ -253,6 +358,7 @@ async function runSearch() {
   const states = validConfiguration();
   if (!states) return;
   stopPlayback();
+  stopSolutionPlayback();
   result = null;
   playbackEvents = [];
   elements.summary.classList.add("hidden");
@@ -279,15 +385,6 @@ async function runSearch() {
     showNotice(error.message);
     setStatus("Error", "idle");
   }
-}
-
-function makeSolutionEvents(path) {
-  return path.map((step, index) => ({
-    current: step.state, parent: index ? path[index - 1].state : null, move: step.move,
-    depth: index, g: index, h: 0, f: index, generated: result.generated, expanded: result.expanded,
-    successors: index < path.length - 1 ? [{ state: path[index + 1].state, move: path[index + 1].move }] : [],
-    frontier: [], explored: []
-  }));
 }
 
 async function runComparison() {
@@ -339,6 +436,7 @@ function initialize() {
   updateStaticBoards();
   updateAlgorithmFields();
   renderAlgorithmInfo();
+  setupControlPanelScroll();
   navigate(location.hash.slice(1) || "home");
 
   $$('[data-page]').forEach((link) => link.addEventListener("click", (event) => {
@@ -364,8 +462,18 @@ function initialize() {
   $("#prev-btn").addEventListener("click", () => { stopPlayback(); playbackIndex = Math.max(0, playbackIndex - 1); renderEvent(playbackEvents[playbackIndex]); setStatus("Paused", "idle"); });
   $("#next-btn").addEventListener("click", () => { stopPlayback(); playbackIndex = Math.min(playbackEvents.length - 1, playbackIndex + 1); renderEvent(playbackEvents[playbackIndex]); setStatus("Paused", "idle"); });
   $("#reset-btn").addEventListener("click", () => { stopPlayback(); playbackIndex = 0; if (playbackEvents.length) renderEvent(playbackEvents[0]); setStatus("Ready", "idle"); });
-  $("#animate-solution-btn").addEventListener("click", () => {
-    if (!result?.found) return; stopPlayback(); playbackEvents = makeSolutionEvents(result.path); playbackIndex = 0; play();
+  elements.animateSolution.addEventListener("click", openSolutionPlayer);
+  elements.solutionPlay.addEventListener("click", () => {
+    if (solutionPlaying) stopSolutionPlayback();
+    else playSolution();
+  });
+  $("#solution-prev-btn").addEventListener("click", () => { stopSolutionPlayback(); renderSolutionStep(solutionIndex - 1); });
+  $("#solution-next-btn").addEventListener("click", () => { stopSolutionPlayback(); renderSolutionStep(solutionIndex + 1); });
+  $("#solution-restart-btn").addEventListener("click", () => { stopSolutionPlayback(); playSolution({ restart: true }); });
+  elements.solutionSpeed.addEventListener("change", () => {
+    if (!solutionPlaying) return;
+    if (solutionTimer) clearTimeout(solutionTimer);
+    scheduleSolutionStep();
   });
   elements.compareButton.addEventListener("click", runComparison);
   $$(".student-strip dd").forEach((field, index) => {
