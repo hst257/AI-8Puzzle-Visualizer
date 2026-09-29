@@ -141,7 +141,7 @@ function setStatus(label, state = "idle") {
 }
 
 function formatStateList(states) {
-  if (!states?.length) return "—";
+  if (!states?.length) return "-";
   return states.map((state) => `<span>${labelOf(state)}</span>`).join("");
 }
 
@@ -163,19 +163,19 @@ function renderEvent(event, index = playbackIndex) {
   lastRenderedState = event.current.slice();
   elements.moveBadge.textContent = event.iteration !== null && event.iteration !== undefined
     ? `Expansion ${index + 1} · limit ${event.iteration}` : `Expansion ${index + 1}`;
-  elements.generated.textContent = event.generated ?? "—";
-  elements.expanded.textContent = event.expanded ?? "—";
+  elements.generated.textContent = event.generated ?? "-";
+  elements.expanded.textContent = event.expanded ?? "-";
   elements.depthMetric.textContent = event.depth ?? 0;
   elements.cost.textContent = event.g ?? 0;
   const informed = ["gbfs", "astar"].includes(elements.algorithm.value);
-  elements.h.textContent = informed ? event.h : "—";
-  elements.f.textContent = elements.algorithm.value === "astar" ? event.f : "—";
+  elements.h.textContent = informed ? event.h : "-";
+  elements.f.textContent = elements.algorithm.value === "astar" ? event.f : "-";
   elements.successors.replaceChildren();
   if (event.successors?.length) event.successors.forEach((item) => elements.successors.append(successorBoard(item)));
   else elements.successors.innerHTML = '<p class="empty-copy">No new successors generated.</p>';
   elements.frontier.innerHTML = formatStateList(event.frontier);
   elements.explored.innerHTML = formatStateList(event.explored);
-  elements.nodeDetail.textContent = `Parent: ${event.parent ? labelOf(event.parent) : "—"}  ·  Move: ${event.move || "Start"}  ·  g(n): ${event.g ?? 0}`;
+  elements.nodeDetail.textContent = `Parent: ${event.parent ? labelOf(event.parent) : "-"}  ·  Move: ${event.move || "Start"}  ·  g(n): ${event.g ?? 0}`;
 }
 
 function stopPlayback() {
@@ -321,9 +321,9 @@ function showSummary(searchResult) {
   elements.summaryTitle.textContent = searchResult.found ? "Solution found" : searchResult.reason === "cutoff" ? "Depth cutoff reached" : searchResult.reason === "unsolvable" ? "Puzzle is unsolvable" : "Solution not found";
   elements.summaryIcon.textContent = searchResult.found ? "✓" : "×";
   const stats = [
-    ["Moves", searchResult.moves ?? "—"], ["Generated", searchResult.generated],
+    ["Moves", searchResult.moves ?? "-"], ["Generated", searchResult.generated],
     ["Expanded", searchResult.expanded], ["Max depth", searchResult.maxDepth],
-    ["Execution time", formatTime(searchResult.timeMs)], ["Path cost", searchResult.pathCost ?? "—"],
+    ["Execution time", formatTime(searchResult.timeMs)], ["Path cost", searchResult.pathCost ?? "-"],
     ["Approx. memory", formatMemory(searchResult.memoryBytes)], ["Algorithm", ALGORITHM_NAMES[elements.algorithm.value]]
   ];
   elements.summaryStats.innerHTML = stats.map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join("");
@@ -408,7 +408,7 @@ async function runComparison() {
 
 function comparisonRow(row) {
   const memoryClass = row.memoryBytes < 50_000 ? "Low" : row.memoryBytes < 500_000 ? "Medium" : "High";
-  return `<tr><td data-label="Algorithm">${algorithmInfo[row.algorithm].short} <small>${ALGORITHM_NAMES[row.algorithm]}</small></td><td data-label="Result"><span class="result-chip ${row.found ? "" : "fail"}">${row.found ? "Found" : row.reason === "cutoff" ? "Cutoff" : "Not found"}</span></td><td data-label="Nodes expanded">${row.expanded.toLocaleString()}</td><td data-label="Moves">${row.moves ?? "—"}</td><td data-label="Time">${formatTime(row.timeMs)}</td><td data-label="Memory" title="${formatMemory(row.memoryBytes)}">${memoryClass}</td></tr>`;
+  return `<tr><td data-label="Algorithm">${algorithmInfo[row.algorithm].short} <small>${ALGORITHM_NAMES[row.algorithm]}</small></td><td data-label="Result"><span class="result-chip ${row.found ? "" : "fail"}">${row.found ? "Found" : row.reason === "cutoff" ? "Cutoff" : "Not found"}</span></td><td data-label="Nodes expanded">${row.expanded.toLocaleString()}</td><td data-label="Moves">${row.moves ?? "-"}</td><td data-label="Time">${formatTime(row.timeMs)}</td><td data-label="Memory" title="${formatMemory(row.memoryBytes)}">${memoryClass}</td></tr>`;
 }
 
 function renderAlgorithmInfo(selected = "bfs") {
