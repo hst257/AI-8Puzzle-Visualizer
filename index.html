@@ -5,8 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Interactive 8-puzzle search algorithm visualizer for BFS, DFS, DLS, IDDLS, GBFS, and A*.">
   <title>8-Puzzle Search Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=3">
+  <link rel="stylesheet" href="css/styles.css?v=4">
 </head>
 <body>
   <header class="site-header">
@@ -15,7 +19,7 @@
         <span class="brand-mark"><i></i><i></i><i></i><i></i></span>
         <span>SEARCH<span class="brand-accent">/08</span></span>
       </a>
-      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menu</button>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav"><i class="ph ph-list" aria-hidden="true"></i> Menu</button>
       <div class="main-nav" id="main-nav">
         <a href="#home" data-page="home" class="active">Home</a>
         <a href="#solver" data-page="solver">Visualizer</a>
@@ -33,7 +37,7 @@
           <h1 id="home-title">Find the path.<br><em>See the search.</em></h1>
           <p class="hero-lead">An interactive laboratory for exploring how six search strategies navigate the classic 8-puzzle state space.</p>
           <div class="hero-actions">
-            <a class="btn-primary-lab" href="#solver" data-page="solver">Open visualizer <span>→</span></a>
+            <a class="btn-primary-lab" href="#solver" data-page="solver">Open visualizer <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
             <a class="btn-quiet" href="#learn" data-page="learn">Study algorithms</a>
           </div>
         </div>
@@ -61,7 +65,7 @@
         <p>The 8-puzzle is a 3 × 3 sliding-tile puzzle. A legal move slides one numbered tile into the blank space. The challenge is to transform an initial arrangement into a chosen goal arrangement while a search algorithm decides which state to explore next.</p>
       </div>
       <div class="container-xl capability-layout">
-        <article class="capability-feature"><span>VISUAL TRACE</span><h3>Watch each decision, not just the answer.</h3><p>Step through expansions, inspect successor states, and see how the frontier changes at every move.</p><a href="#solver" data-page="solver">Enter the workspace <b>→</b></a></article>
+        <article class="capability-feature"><span>VISUAL TRACE</span><h3>Watch each decision, not just the answer.</h3><p>Step through expansions, inspect successor states, and see how the frontier changes at every move.</p><a href="#solver" data-page="solver">Enter the workspace <i class="ph ph-arrow-right" aria-hidden="true"></i></a></article>
         <div class="capability-stack">
           <article><h3>Configure precisely</h3><p>Enter any valid start and goal, or generate a guaranteed solvable puzzle.</p></article>
           <article><h3>Compare honestly</h3><p>Run six strategies on the same instance and inspect their real trade-offs.</p></article>
@@ -89,8 +93,8 @@
             </fieldset>
           </div>
           <div class="button-row compact">
-            <button class="btn-outline-lab" id="randomize-btn" type="button">↻ Random solvable</button>
-            <button class="text-button" id="swap-btn" type="button">Swap states</button>
+            <button class="btn-outline-lab" id="randomize-btn" type="button"><i class="ph ph-shuffle" aria-hidden="true"></i> Random solvable</button>
+            <button class="text-button" id="swap-btn" type="button"><i class="ph ph-arrows-left-right" aria-hidden="true"></i> Swap states</button>
           </div>
           <div class="divider"></div>
           <div class="panel-heading"><h2>Search strategy</h2></div>
@@ -116,7 +120,7 @@
           </div>
           <p class="algorithm-note" id="algorithm-note"></p>
           <div id="validation-message" class="notice" role="status" aria-live="polite"></div>
-          <button class="btn-primary-lab full" id="run-btn" type="button">Run search <span>→</span></button>
+          <button class="btn-primary-lab full" id="run-btn" type="button">Run search <i class="ph ph-play" aria-hidden="true"></i></button>
         </aside>
 
         <div class="visualizer-column">
@@ -135,10 +139,10 @@
               <div class="state-card side-state"><span>Goal</span><div class="puzzle-board small" id="goal-board"></div></div>
             </div>
             <div class="transport" aria-label="Playback controls">
-              <button type="button" id="reset-btn" title="Reset playback">↺</button>
-              <button type="button" id="prev-btn" title="Previous step">←</button>
-              <button type="button" id="play-btn" class="play" title="Play or pause">▶</button>
-              <button type="button" id="next-btn" title="Next step">→</button>
+              <button type="button" id="reset-btn" title="Reset playback"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i></button>
+              <button type="button" id="prev-btn" title="Previous step"><i class="ph ph-skip-back" aria-hidden="true"></i></button>
+              <button type="button" id="play-btn" class="play" title="Play or pause"><i class="ph ph-play" aria-hidden="true"></i></button>
+              <button type="button" id="next-btn" title="Next step"><i class="ph ph-skip-forward" aria-hidden="true"></i></button>
               <label for="speed-select">Speed
                 <select id="speed-select"><option value="1200">0.5×</option><option value="650" selected>1×</option><option value="280">2×</option><option value="100">4×</option></select>
               </label>
@@ -164,9 +168,9 @@
           </section>
 
           <section class="panel summary-panel hidden" id="summary-panel">
-            <div class="summary-head"><div><p class="kicker">Search complete</p><h2 id="summary-title">Solution found</h2></div><span id="summary-icon">✓</span></div>
+            <div class="summary-head"><div><p class="kicker">Search complete</p><h2 id="summary-title">Solution found</h2></div><span id="summary-icon"><i class="ph ph-check" aria-hidden="true"></i></span></div>
             <div class="summary-stats" id="summary-stats"></div>
-            <div class="solution-heading"><h3>Final solution path</h3><button class="animate-path-button" id="animate-solution-btn" type="button"><span>▶</span> Animate solution</button></div>
+            <div class="solution-heading"><h3>Final solution path</h3><button class="animate-path-button" id="animate-solution-btn" type="button"><span><i class="ph ph-play" aria-hidden="true"></i></span> Animate solution</button></div>
             <div class="solution-player hidden" id="solution-player" aria-live="polite">
               <div class="solution-player-copy">
                 <p class="kicker">Solution playback</p>
@@ -175,10 +179,10 @@
                 <div class="solution-progress-meta"><span id="solution-step-label">Step 0 of 0</span><strong id="solution-move-label">Start</strong></div>
                 <div class="solution-progress" aria-hidden="true"><span id="solution-progress-bar"></span></div>
                 <div class="solution-controls" aria-label="Solution playback controls">
-                  <button type="button" id="solution-restart-btn" title="Restart solution">↺</button>
-                  <button type="button" id="solution-prev-btn" title="Previous solution step">←</button>
-                  <button type="button" id="solution-play-btn" class="solution-play" title="Play or pause solution">Ⅱ</button>
-                  <button type="button" id="solution-next-btn" title="Next solution step">→</button>
+                  <button type="button" id="solution-restart-btn" title="Restart solution"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i></button>
+                  <button type="button" id="solution-prev-btn" title="Previous solution step"><i class="ph ph-skip-back" aria-hidden="true"></i></button>
+                  <button type="button" id="solution-play-btn" class="solution-play" title="Play or pause solution"><i class="ph ph-pause" aria-hidden="true"></i></button>
+                  <button type="button" id="solution-next-btn" title="Next solution step"><i class="ph ph-skip-forward" aria-hidden="true"></i></button>
                   <label for="solution-speed-select">Speed
                     <select id="solution-speed-select">
                       <option value="1200">0.5×</option>
@@ -208,7 +212,7 @@
       <div class="container-xl panel comparison-panel">
         <div class="comparison-toolbar">
           <div><strong>Current solver puzzle</strong><span id="comparison-puzzle-label">Uses the initial and goal states from the visualizer.</span></div>
-          <button class="btn-primary-lab" id="compare-btn" type="button">Run all algorithms <span>→</span></button>
+          <button class="btn-primary-lab" id="compare-btn" type="button">Run all algorithms <i class="ph ph-play" aria-hidden="true"></i></button>
         </div>
         <div class="table-responsive">
           <table class="comparison-table">
@@ -239,6 +243,6 @@
 
   <footer><div class="container-xl"><span>8-Puzzle Search Lab</span><span>Built with HTML5 · CSS3 · JavaScript ES6 · Bootstrap</span></div></footer>
 
-  <script type="module" src="js/app.js?v=3"></script>
+  <script type="module" src="js/app.js?v=4"></script>
 </body>
 </html>

@@ -13,6 +13,7 @@ import {
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
 const delay = (milliseconds = 0) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const icon = (name) => `<i class="ph ph-${name}" aria-hidden="true"></i>`;
 
 const elements = {
   initialInput: $("#initial-input"), goalInput: $("#goal-input"),
@@ -182,7 +183,7 @@ function stopPlayback() {
   if (timer) clearTimeout(timer);
   timer = null;
   playing = false;
-  elements.play.textContent = "▶";
+  elements.play.innerHTML = icon("play");
   elements.play.title = "Resume";
 }
 
@@ -190,7 +191,7 @@ function stopSolutionPlayback(completed = false) {
   if (solutionTimer) clearTimeout(solutionTimer);
   solutionTimer = null;
   solutionPlaying = false;
-  elements.solutionPlay.textContent = completed ? "↺" : "▶";
+  elements.solutionPlay.innerHTML = icon(completed ? "arrow-counter-clockwise" : "play");
   elements.solutionPlay.title = completed ? "Replay solution" : "Resume solution";
 }
 
@@ -209,7 +210,7 @@ function renderSolutionStep(index) {
   elements.solutionStepLabel.textContent = `Step ${solutionIndex} of ${finalIndex}`;
   elements.solutionMoveLabel.textContent = complete ? "Goal reached" : solutionIndex === 0 ? "Start" : `${step.move} move`;
   elements.solutionProgressBar.style.width = `${progress}%`;
-  elements.solutionGoalBadge.textContent = complete ? "Goal reached ✓" : "In progress";
+  elements.solutionGoalBadge.innerHTML = complete ? `Goal reached ${icon("check")}` : "In progress";
   elements.solutionGoalBadge.classList.toggle("complete", complete);
 
   $$(".path-step", elements.solutionPath).forEach((pathStep, pathIndex) => pathStep.classList.toggle("active", pathIndex === solutionIndex));
@@ -226,7 +227,7 @@ function scheduleSolutionStep() {
   if (!solutionPlaying || !result?.path?.length) return;
   if (solutionIndex >= result.path.length - 1) {
     stopSolutionPlayback(true);
-    elements.animateSolution.innerHTML = "<span>↺</span> Replay animation";
+    elements.animateSolution.innerHTML = `<span>${icon("arrow-counter-clockwise")}</span> Replay animation`;
     return;
   }
   solutionTimer = setTimeout(() => {
@@ -242,9 +243,9 @@ function playSolution({ restart = false } = {}) {
   elements.solutionPlayer.classList.remove("hidden");
   renderSolutionStep(solutionIndex);
   solutionPlaying = true;
-  elements.solutionPlay.textContent = "Ⅱ";
+  elements.solutionPlay.innerHTML = icon("pause");
   elements.solutionPlay.title = "Pause solution";
-  elements.animateSolution.innerHTML = "<span>↺</span> Restart animation";
+  elements.animateSolution.innerHTML = `<span>${icon("arrow-counter-clockwise")}</span> Restart animation`;
   scheduleSolutionStep();
 }
 
@@ -293,7 +294,7 @@ function play() {
   if (!playbackEvents.length) return;
   if (playbackIndex >= playbackEvents.length - 1) playbackIndex = 0;
   playing = true;
-  elements.play.textContent = "Ⅱ";
+  elements.play.innerHTML = icon("pause");
   elements.play.title = "Pause";
   setStatus("Playing trace", "running");
   renderEvent(playbackEvents[playbackIndex]);
@@ -319,7 +320,7 @@ function formatMemory(bytes) {
 function showSummary(searchResult) {
   elements.summary.classList.remove("hidden");
   elements.summaryTitle.textContent = searchResult.found ? "Solution found" : searchResult.reason === "cutoff" ? "Depth cutoff reached" : searchResult.reason === "unsolvable" ? "Puzzle is unsolvable" : "Solution not found";
-  elements.summaryIcon.textContent = searchResult.found ? "✓" : "×";
+  elements.summaryIcon.innerHTML = icon(searchResult.found ? "check" : "x");
   const stats = [
     ["Moves", searchResult.moves ?? "-"], ["Generated", searchResult.generated],
     ["Expanded", searchResult.expanded], ["Max depth", searchResult.maxDepth],
@@ -330,7 +331,7 @@ function showSummary(searchResult) {
   stopSolutionPlayback();
   solutionIndex = 0;
   elements.solutionPlayer.classList.add("hidden");
-  elements.animateSolution.innerHTML = "<span>▶</span> Animate solution";
+  elements.animateSolution.innerHTML = `<span>${icon("play")}</span> Animate solution`;
   elements.solutionPath.replaceChildren();
   if (!searchResult.path.length) {
     elements.solutionPath.innerHTML = '<p class="empty-copy">No solution path is available for this run.</p>';
@@ -403,7 +404,7 @@ async function runComparison() {
     elements.compareBody.innerHTML = rows.map(comparisonRow).join("") + (rows.length < algorithms.length ? '<tr><td colspan="6" class="table-empty">Running remaining algorithms…</td></tr>' : "");
   }
   elements.compareButton.disabled = false;
-  elements.compareButton.innerHTML = 'Run again <span>→</span>';
+  elements.compareButton.innerHTML = `Run again ${icon("arrow-clockwise")}`;
 }
 
 function comparisonRow(row) {

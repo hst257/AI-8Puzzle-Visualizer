@@ -4,40 +4,43 @@
 
 ## Project Structure & Module Organization
 
-This repository is a static 8-puzzle search visualizer.
+This is a static 8-puzzle search visualizer.
 
-- `index.html` contains all page markup and interactive controls.
+- `index.html` contains page markup and controls.
 - `css/styles.css` defines the responsive visual system and component states.
-- `js/algorithms.js` contains puzzle utilities, heuristics, and all six search implementations.
+- `js/algorithms.js` contains puzzle utilities and search algorithms.
 - `js/app.js` connects the algorithms to navigation, playback, comparison, and form controls.
-- `test/algorithms.test.js` covers algorithm correctness with Node's built-in test runner.
+- `test/algorithms.test.js` uses Node's test runner.
 - `docs/ALGORITHMS.md` documents the search methods and complexity assumptions.
-- `assets/` and `images/` are reserved for static media and screenshots.
+- `DESIGN.md` is the visual design specification for the interface.
+- `assets/` and `images/` hold static media and screenshots.
 
 Keep algorithm logic independent of the DOM. UI changes belong in `app.js`, `index.html`, or `styles.css`.
 
 ## Build, Test, and Development Commands
 
-No build step or dependency installation is required.
+No build step is required.
 
 ```bash
 python -m http.server 8000
 ```
 
-Serves the repository at `http://localhost:8000`. Use a server because browser ES modules do not work reliably through `file://` URLs.
+Serves the repository at `http://localhost:8000`. Browser ES modules require a server instead of a `file://` URL.
 
 ```bash
 npm test
 node --check js/app.js
 ```
 
-`npm test` runs every Node test. The syntax check is useful after editing UI behavior.
+`npm test` runs all tests. Use the syntax check after editing UI behavior.
 
 ## Coding Style & Naming Conventions
 
-Use two-space indentation in HTML, CSS, and JavaScript. Prefer ES modules, `const`, template literals, and small single-purpose functions. Use `camelCase` for JavaScript identifiers, kebab-case for CSS classes and element IDs, and descriptive algorithm keys such as `iddls` or `astar`.
+Use two-space indentation in HTML, CSS, and JavaScript. Prefer ES modules and small single-purpose functions. Use `camelCase` for JavaScript identifiers, kebab-case for CSS classes and IDs, and keys such as `iddls` or `astar`.
 
-There is no automated formatter or linter. Match surrounding style and run `git diff --check` before committing. Preserve DOM IDs referenced by `js/app.js`, or update both files together.
+Follow `DESIGN.md` for visual changes. Use Phosphor icons (`ph ph-*`) for interface controls instead of Unicode symbols, emoji, or custom SVGs. Decorative icons require `aria-hidden="true"`; controls still need accessible text or titles.
+
+Match surrounding style and run `git diff --check` before committing. Preserve DOM IDs referenced by `js/app.js`.
 
 ## Testing Guidelines
 
