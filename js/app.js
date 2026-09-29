@@ -409,7 +409,10 @@ async function runComparison() {
 
 function comparisonRow(row) {
   const memoryClass = row.memoryBytes < 50_000 ? "Low" : row.memoryBytes < 500_000 ? "Medium" : "High";
-  return `<tr><td data-label="Algorithm">${algorithmInfo[row.algorithm].short} <small>${ALGORITHM_NAMES[row.algorithm]}</small></td><td data-label="Result"><span class="result-chip ${row.found ? "" : "fail"}">${row.found ? "Found" : row.reason === "cutoff" ? "Cutoff" : "Not found"}</span></td><td data-label="Nodes expanded">${row.expanded.toLocaleString()}</td><td data-label="Moves">${row.moves ?? "-"}</td><td data-label="Time">${formatTime(row.timeMs)}</td><td data-label="Memory" title="${formatMemory(row.memoryBytes)}">${memoryClass}</td></tr>`;
+  const shortName = algorithmInfo[row.algorithm].short;
+  const fullName = ALGORITHM_NAMES[row.algorithm];
+  const detailName = fullName.startsWith(shortName) ? fullName.slice(shortName.length).trim() : fullName;
+  return `<tr><td data-label="Algorithm">${shortName} <small>${detailName}</small></td><td data-label="Result"><span class="result-chip ${row.found ? "" : "fail"}">${row.found ? "Found" : row.reason === "cutoff" ? "Cutoff" : "Not found"}</span></td><td data-label="Nodes expanded">${row.expanded.toLocaleString()}</td><td data-label="Moves">${row.moves ?? "-"}</td><td data-label="Time">${formatTime(row.timeMs)}</td><td data-label="Memory" title="${formatMemory(row.memoryBytes)}">${memoryClass}</td></tr>`;
 }
 
 function renderAlgorithmInfo(selected = "bfs") {
@@ -431,6 +434,347 @@ function navigate(pageId) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function setupHeroPressurePlate() {
+  const board = $(".demo-board");
+  const supportsHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!board || !supportsHover || reducedMotion) return;
+
+  let animationFrame = null;
+  let bounds = null;
+
+  const updatePlate = (event) => {
+    if (!bounds) bounds = board.getBoundingClientRect();
+    const pointerX = Math.max(-1, Math.min(1, (event.clientX - bounds.left) / bounds.width * 2 - 1));
+    const pointerY = Math.max(-1, Math.min(1, (event.clientY - bounds.top) / bounds.height * 2 - 1));
+
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+    animationFrame = requestAnimationFrame(() => {
+      board.classList.add("is-pressure-active");
+      board.style.setProperty("--plate-rotate-x", `${(-pointerY * 8).toFixed(2)}deg`);
+      board.style.setProperty("--plate-rotate-y", `${(pointerX * 8).toFixed(2)}deg`);
+      board.style.setProperty("--plate-shadow-shift-x", `${(-pointerX * 7).toFixed(1)}px`);
+      board.style.setProperty("--plate-shadow-shift-y", `${(-pointerY * 7).toFixed(1)}px`);
+    });
+  };
+
+  const resetPlate = () => {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+    animationFrame = null;
+    bounds = null;
+    board.classList.remove("is-pressure-active");
+    board.style.setProperty("--plate-rotate-x", "0deg");
+    board.style.setProperty("--plate-rotate-y", "0deg");
+    board.style.setProperty("--plate-shadow-shift-x", "0px");
+    board.style.setProperty("--plate-shadow-shift-y", "0px");
+  };
+
+  board.addEventListener("pointerenter", (event) => {
+    bounds = board.getBoundingClientRect();
+    updatePlate(event);
+  });
+  board.addEventListener("pointermove", updatePlate);
+  board.addEventListener("pointerleave", resetPlate);
+  board.addEventListener("pointercancel", resetPlate);
+}
+
+function setupSiteMeshShader() {
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reducedMotion) return;
+
+  const canvas = document.createElement("canvas");
+  const gl = canvas.getContext("webgl", { alpha: true, antialias: false, powerPreference: "low-power" });
+  if (!gl) return;
+
+  const vertexSource = `
+    attribute vec2 a_position;
+    void main() {
+      gl_Position = vec4(a_position, 0.0, 1.0);
+    }
+  `;
+  const fragmentSource = `
+    precision mediump float;
+
+    uniform vec2 u_resolution;
+    uniform float u_time;
+
+    float hash21(vec2 point) {
+      point = fract(point * vec2(123.34, 345.45));
+      point += dot(point, point + 34.345);
+      return fract(point.x * point.y);
+    }
+
+    float noise(vec2 point) {
+      vec2 cell = floor(point);
+      vec2 offset = fract(point);
+      vec2 curve = offset * offset * (3.0 - 2.0 * offset);
+      return mix(
+        mix(hash21(cell), hash21(cell + vec2(1.0, 0.0)), curve.x),
+        mix(hash21(cell + vec2(0.0, 1.0)), hash21(cell + vec2(1.0, 1.0)), curve.x),
+        curve.y
+      );
+    }
+
+    float fbm(vec2 point) {
+      float value = 0.0;
+      float amplitude = 0.5;
+      for (int octave = 0; octave < 4; octave++) {
+        value += amplitude * noise(point);
+        point = point * 2.03 + vec2(13.7, 8.4);
+        amplitude *= 0.5;
+      }
+      return value;
+    }
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_resolution;
+      vec2 point = (gl_FragCoord.xy - 0.5 * u_resolution) / min(u_resolution.x, u_resolution.y);
+      float time = u_time * 0.23;
+
+      vec2 drift = vec2(
+        fbm(point * 1.35 + vec2(time, -time * 0.42)),
+        fbm(point * 1.35 + vec2(5.2 - time * 0.36, 1.3 + time * 0.28))
+      ) - 0.5;
+      vec2 warped = point + drift * 0.22;
+
+      vec2 centerA = vec2(sin(time * 0.73), cos(time * 0.57)) * 0.48;
+      vec2 centerB = vec2(cos(time * 0.43 + 1.8), sin(time * 0.64 + 2.4)) * 0.56;
+      float fieldA = exp(-dot(warped - centerA, warped - centerA) * 4.8);
+      float fieldB = exp(-dot(warped - centerB, warped - centerB) * 5.6);
+      float texture = fbm(warped * 1.9 + time * 0.08);
+
+      vec3 deepNavy = vec3(0.031, 0.047, 0.086);
+      vec3 slate = vec3(0.118, 0.161, 0.231);
+      vec3 deepTeal = vec3(0.027, 0.278, 0.267);
+      vec3 accent = vec3(0.176, 0.831, 0.749);
+
+      vec3 color = mix(deepNavy, slate, 0.38 + texture * 0.32);
+      color = mix(color, deepTeal, fieldA * 0.42);
+      color = mix(color, accent, fieldB * 0.11);
+
+      float edgeDistance = length(uv - 0.5) * 1.2;
+      color *= 1.0 - smoothstep(0.38, 0.82, edgeDistance) * 0.18;
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `;
+
+  const compileShader = (type, source) => {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      gl.deleteShader(shader);
+      return null;
+    }
+    return shader;
+  };
+
+  const vertexShader = compileShader(gl.VERTEX_SHADER, vertexSource);
+  const fragmentShader = compileShader(gl.FRAGMENT_SHADER, fragmentSource);
+  if (!vertexShader || !fragmentShader) return;
+
+  const program = gl.createProgram();
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+  gl.deleteShader(vertexShader);
+  gl.deleteShader(fragmentShader);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    gl.deleteProgram(program);
+    return;
+  }
+
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  gl.useProgram(program);
+
+  const position = gl.getAttribLocation(program, "a_position");
+  gl.enableVertexAttribArray(position);
+  gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+  const resolution = gl.getUniformLocation(program, "u_resolution");
+  const time = gl.getUniformLocation(program, "u_time");
+
+  canvas.className = "site-mesh";
+  canvas.setAttribute("aria-hidden", "true");
+  document.body.prepend(canvas);
+
+  let frame = null;
+  let visible = document.visibilityState === "visible";
+  let lastDraw = 0;
+  const start = performance.now();
+
+  const resizeCanvas = () => {
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+    const rawWidth = Math.max(1, Math.round(document.documentElement.clientWidth * pixelRatio));
+    const rawHeight = Math.max(1, Math.round(window.innerHeight * pixelRatio));
+    const scale = Math.min(1, Math.sqrt(1_000_000 / Math.max(1, rawWidth * rawHeight)));
+    const width = Math.max(1, Math.round(rawWidth * scale));
+    const height = Math.max(1, Math.round(rawHeight * scale));
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+      gl.viewport(0, 0, width, height);
+    }
+  };
+
+  const render = (now) => {
+    frame = null;
+    if (!visible) return;
+    if (now - lastDraw >= 32) {
+      lastDraw = now;
+      resizeCanvas();
+      gl.uniform2f(resolution, canvas.width, canvas.height);
+      gl.uniform1f(time, (now - start) / 1000);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    frame = requestAnimationFrame(render);
+  };
+
+  const requestRender = () => {
+    if (!frame && visible) frame = requestAnimationFrame(render);
+  };
+
+  window.addEventListener("resize", () => {
+    resizeCanvas();
+    requestRender();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    visible = document.visibilityState === "visible";
+    if (visible) requestRender();
+    else if (frame) {
+      cancelAnimationFrame(frame);
+      frame = null;
+    }
+  });
+
+  resizeCanvas();
+  requestRender();
+}
+
+function setupHeroGravityGrid() {
+  const hero = $(".hero-visual");
+  const supportsHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!hero || !supportsHover || reducedMotion) return;
+
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!context) return;
+
+  canvas.className = "gravity-grid";
+  canvas.setAttribute("aria-hidden", "true");
+  hero.prepend(canvas);
+
+  const grid = {
+    width: 0,
+    height: 0,
+    x: 0,
+    y: 0,
+    targetX: 0,
+    targetY: 0,
+    strength: 0,
+    targetStrength: 0,
+    frame: null
+  };
+
+  const warpPoint = (x, y) => {
+    const deltaX = grid.x - x;
+    const deltaY = grid.y - y;
+    const distance = Math.hypot(deltaX, deltaY);
+    const radius = 125;
+    if (!grid.strength || distance >= radius || distance < .01) return [x, y];
+    const falloff = 1 - distance / radius;
+    const pull = 15 * falloff * falloff * grid.strength;
+    return [x + deltaX / distance * pull, y + deltaY / distance * pull];
+  };
+
+  const drawGrid = () => {
+    context.clearRect(0, 0, grid.width, grid.height);
+    context.strokeStyle = getComputedStyle(hero).getPropertyValue("--paper-2").trim() || "#edf0ec";
+    context.lineWidth = 1;
+
+    const spacing = 32;
+    const sample = 10;
+    for (let x = 0; x <= grid.width + spacing; x += spacing) {
+      context.beginPath();
+      for (let y = 0; y <= grid.height + sample; y += sample) {
+        const [warpedX, warpedY] = warpPoint(x, y);
+        if (y === 0) context.moveTo(warpedX, warpedY);
+        else context.lineTo(warpedX, warpedY);
+      }
+      context.stroke();
+    }
+
+    for (let y = 0; y <= grid.height + spacing; y += spacing) {
+      context.beginPath();
+      for (let x = 0; x <= grid.width + sample; x += sample) {
+        const [warpedX, warpedY] = warpPoint(x, y);
+        if (x === 0) context.moveTo(warpedX, warpedY);
+        else context.lineTo(warpedX, warpedY);
+      }
+      context.stroke();
+    }
+  };
+
+  const animateGrid = () => {
+    grid.x += (grid.targetX - grid.x) * .18;
+    grid.y += (grid.targetY - grid.y) * .18;
+    grid.strength += (grid.targetStrength - grid.strength) * .16;
+    drawGrid();
+
+    const stillMoving = Math.abs(grid.targetX - grid.x) > .1
+      || Math.abs(grid.targetY - grid.y) > .1
+      || Math.abs(grid.targetStrength - grid.strength) > .01;
+    grid.frame = stillMoving ? requestAnimationFrame(animateGrid) : null;
+  };
+
+  const scheduleGrid = () => {
+    if (!grid.frame) grid.frame = requestAnimationFrame(animateGrid);
+  };
+
+  const releaseGrid = () => {
+    grid.targetStrength = 0;
+    scheduleGrid();
+  };
+
+  const resizeGrid = () => {
+    const bounds = hero.getBoundingClientRect();
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    grid.width = bounds.width;
+    grid.height = bounds.height;
+    canvas.width = Math.max(1, Math.round(grid.width * pixelRatio));
+    canvas.height = Math.max(1, Math.round(grid.height * pixelRatio));
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    drawGrid();
+    hero.classList.add("gravity-grid-ready");
+  };
+
+  hero.addEventListener("pointermove", (event) => {
+    if (event.target.closest(".demo-board, .trace-header, .trace-route, .trace-meta")) {
+      releaseGrid();
+      return;
+    }
+
+    const bounds = hero.getBoundingClientRect();
+    grid.targetX = event.clientX - bounds.left;
+    grid.targetY = event.clientY - bounds.top;
+    if (!grid.strength) {
+      grid.x = grid.targetX;
+      grid.y = grid.targetY;
+    }
+    grid.targetStrength = 1;
+    scheduleGrid();
+  });
+  hero.addEventListener("pointerleave", releaseGrid);
+  hero.addEventListener("pointercancel", releaseGrid);
+
+  const resizeObserver = new ResizeObserver(resizeGrid);
+  resizeObserver.observe(hero);
+  resizeGrid();
+}
+
 function initialize() {
   buildInputs(elements.initialInput, DEFAULT_INITIAL);
   buildInputs(elements.goalInput, DEFAULT_GOAL);
@@ -438,6 +782,9 @@ function initialize() {
   updateAlgorithmFields();
   renderAlgorithmInfo();
   setupControlPanelScroll();
+  setupHeroPressurePlate();
+  setupSiteMeshShader();
+  setupHeroGravityGrid();
   navigate(location.hash.slice(1) || "home");
 
   $$('[data-page]').forEach((link) => link.addEventListener("click", (event) => {

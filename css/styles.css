@@ -19,7 +19,8 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; min-height: 100dvh; overflow-x: hidden; color-scheme: dark; background: var(--paper); color: var(--ink); font-family: var(--sans); }
+body { position: relative; isolation: isolate; margin: 0; min-height: 100dvh; overflow-x: hidden; color-scheme: dark; background: var(--paper); color: var(--ink); font-family: var(--sans); }
+.site-mesh { position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: -2; pointer-events: none; opacity: .74; filter: saturate(.96) contrast(1.04); }
 button, input, select { font: inherit; }
 button { color: inherit; }
 a { color: inherit; text-decoration: none; }
@@ -27,7 +28,7 @@ a { color: inherit; text-decoration: none; }
 i.ph { font-size: 1.05em; line-height: 1; }
 .container-xl { max-width: 1280px; }
 
-.site-header { position: sticky; top: 0; z-index: 50; background: rgba(8, 12, 22, .9); border-bottom: 1px solid var(--line); backdrop-filter: blur(16px); }
+.site-header { position: sticky; top: 0; z-index: 50; background: rgba(8, 12, 22, .68); border-bottom: 1px solid rgba(39, 39, 42, .78); backdrop-filter: blur(18px) saturate(118%); -webkit-backdrop-filter: blur(18px) saturate(118%); }
 .nav-shell { height: 72px; display: flex; align-items: center; justify-content: space-between; }
 .brand { display: inline-flex; gap: 11px; align-items: center; font-weight: 800; letter-spacing: -.025em; }
 .brand-accent { color: var(--accent); }
@@ -64,8 +65,10 @@ i.ph { font-size: 1.05em; line-height: 1; }
 .btn-outline-lab { background: transparent; border: 1px solid var(--ink); }
 .btn-outline-lab:hover { background: var(--ink); color: var(--white); }
 
-.hero-visual { position: relative; height: 500px; display: grid; place-items: center; overflow: hidden; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); isolation: isolate; }
+.hero-visual { position: relative; height: 500px; display: grid; place-items: center; overflow: hidden; background: rgba(30, 41, 59, .82); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); isolation: isolate; }
 .hero-visual::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .7; background-image: linear-gradient(var(--paper-2) 1px, transparent 1px), linear-gradient(90deg, var(--paper-2) 1px, transparent 1px); background-size: 32px 32px; mask-image: linear-gradient(to bottom, #000, transparent 88%); }
+.hero-visual.gravity-grid-ready::before { opacity: 0; }
+.gravity-grid { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; opacity: .7; mask-image: linear-gradient(to bottom, #000, transparent 88%); -webkit-mask-image: linear-gradient(to bottom, #000, transparent 88%); }
 .hero-visual::after { content: ""; position: absolute; right: -15%; bottom: -34%; width: 370px; height: 370px; border: 68px solid var(--accent-soft); border-radius: 50%; z-index: -1; }
 .trace-header, .trace-meta { position: absolute; left: 24px; right: 24px; display: flex; justify-content: space-between; color: var(--muted); font: 600 .65rem var(--mono); }
 .trace-header { top: 22px; padding-bottom: 13px; border-bottom: 1px solid var(--line); }
@@ -73,7 +76,32 @@ i.ph { font-size: 1.05em; line-height: 1; }
 .trace-meta { bottom: 21px; gap: 12px; justify-content: flex-start; }
 .trace-meta span { padding-right: 13px; border-right: 1px solid var(--line); }
 .demo-board, .puzzle-board { display: grid; grid-template-columns: repeat(3, 1fr); }
-.demo-board { width: 272px; height: 272px; padding: 9px; gap: 7px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: 16px 18px 0 var(--accent-soft); transform: translate(-28px, -2px) rotate(-2deg); z-index: 2; }
+.demo-board {
+  --plate-offset-x: -28px;
+  --plate-offset-y: -2px;
+  --plate-rotate-x: 0deg;
+  --plate-rotate-y: 0deg;
+  --plate-shadow-base-x: 16px;
+  --plate-shadow-base-y: 18px;
+  --plate-shadow-shift-x: 0px;
+  --plate-shadow-shift-y: 0px;
+  position: relative;
+  width: 272px;
+  height: 272px;
+  padding: 9px;
+  gap: 7px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: calc(var(--plate-shadow-base-x) + var(--plate-shadow-shift-x)) calc(var(--plate-shadow-base-y) + var(--plate-shadow-shift-y)) 0 var(--accent-soft), 0 24px 45px rgba(19, 36, 31, .08);
+  transform: perspective(900px) translate(var(--plate-offset-x), var(--plate-offset-y)) rotateX(var(--plate-rotate-x)) rotateY(var(--plate-rotate-y)) rotateZ(-2deg);
+  transform-style: preserve-3d;
+  transform-origin: center;
+  transition: transform 480ms cubic-bezier(.22, 1, .36, 1), box-shadow 480ms cubic-bezier(.22, 1, .36, 1);
+  will-change: transform;
+  z-index: 2;
+}
+.demo-board.is-pressure-active { transition-duration: 90ms; box-shadow: calc(var(--plate-shadow-base-x) + var(--plate-shadow-shift-x)) calc(var(--plate-shadow-base-y) + var(--plate-shadow-shift-y)) 0 var(--accent-soft), 0 30px 55px rgba(19, 36, 31, .14); }
 .demo-board span, .puzzle-board .tile { display: grid; place-items: center; border: 1px solid var(--line); background: var(--white); font-weight: 800; }
 .demo-board span { border-radius: 4px; font: 600 1.45rem var(--mono); animation: tilePop .5s calc(var(--n) * 60ms) both; }
 .demo-board span:nth-child(6) { color: var(--white); background: var(--accent); border-color: var(--accent); }
@@ -305,7 +333,7 @@ footer > div { display: flex; justify-content: space-between; }
   .hero-actions { align-items: stretch; margin-top: 27px; }
   .hero-actions .btn-primary-lab { flex: 1; }
   .hero-visual { height: 350px; }
-  .demo-board { width: min(210px, 61vw); height: min(210px, 61vw); gap: 5px; padding: 7px; transform: translate(-18px, 0) rotate(-2deg); box-shadow: 11px 12px 0 var(--accent-soft); }
+  .demo-board { --plate-offset-x: -18px; --plate-offset-y: 0; --plate-shadow-base-x: 11px; --plate-shadow-base-y: 12px; width: min(210px, 61vw); height: min(210px, 61vw); gap: 5px; padding: 7px; }
   .trace-route { top: 88px; right: 7px; bottom: 70px; width: 68px; }
   .trace-header, .trace-meta { left: 16px; right: 16px; }
   .trace-meta { gap: 8px; font-size: .56rem; }
