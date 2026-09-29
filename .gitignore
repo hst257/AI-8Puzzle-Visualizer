@@ -29,6 +29,9 @@ pnpm-debug.log*
 *.swp
 *.swo
 
+# Local agent tooling and managed worktrees
+.kilo/
+
 # Operating-system metadata
 .DS_Store
 Thumbs.db
