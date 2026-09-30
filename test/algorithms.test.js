@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_GOAL,
   DEFAULT_INITIAL,
+  isSingleTileSlide,
   isSolvable,
   manhattanDistance,
   misplacedTiles,
@@ -27,6 +28,13 @@ test("detects solvability relative to a custom goal", () => {
 test("generates only legal neighboring states", () => {
   assert.equal(successors([1, 2, 3, 4, 0, 5, 6, 7, 8]).length, 4);
   assert.equal(successors([0, 1, 2, 3, 4, 5, 6, 7, 8]).length, 2);
+});
+
+test("distinguishes a tile slide from a trace reset or branch switch", () => {
+  const branches = successors(DEFAULT_INITIAL);
+  assert.equal(isSingleTileSlide(DEFAULT_INITIAL, branches[0].state), true);
+  assert.equal(isSingleTileSlide(DEFAULT_INITIAL, DEFAULT_INITIAL), false);
+  assert.equal(isSingleTileSlide(branches[0].state, branches[1].state), false);
 });
 
 test("calculates both heuristics without counting the blank", () => {

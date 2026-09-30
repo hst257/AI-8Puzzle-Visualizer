@@ -2,13 +2,14 @@ import {
   ALGORITHM_NAMES,
   DEFAULT_GOAL,
   DEFAULT_INITIAL,
+  isSingleTileSlide,
   isSolvable,
   keyOf,
   labelOf,
   randomSolvableState,
   solvePuzzle,
   validateState
-} from "./algorithms.js";
+} from "./algorithms.js?v=2";
 
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
@@ -56,6 +57,8 @@ const algorithmInfo = {
 const algorithmOrder = Object.keys(algorithmInfo);
 const algorithmTransitionDuration = 360;
 const algorithmTransitionEasing = "cubic-bezier(.65, 0, .35, 1)";
+const boardMotionEasing = "cubic-bezier(.22, 1, .36, 1)";
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 let result = null;
 let playbackEvents = [];
@@ -96,15 +99,56 @@ function writeState(container, state) {
   $$('input', container).forEach((input, index) => { input.value = state[index] === 0 ? "" : state[index]; });
 }
 
-function renderBoard(container, state, previous = null) {
-  container.replaceChildren();
-  const oldBlank = previous ? previous.indexOf(0) : -1;
+function boardMotionDuration(interval) {
+  if (reducedMotionQuery.matches) return 0;
+  const stepInterval = Number(interval);
+  if (!Number.isFinite(stepInterval) || stepInterval <= 0) return 320;
+  return Math.round(Math.max(80, Math.min(420, stepInterval * .62)));
+}
+
+function renderBoard(container, state, previous = null, { animate = false, duration = 320 } = {}) {
+  const existingTiles = new Map($$(".tile", container).map((tile) => [Number(tile.dataset.value), tile]));
+  const renderedState = $$(".tile", container).map((tile) => Number(tile.dataset.value));
+  const priorState = renderedState.length === state.length ? renderedState : previous;
+  const oldBlank = priorState ? priorState.indexOf(0) : -1;
+  const shouldAnimate = animate && duration > 0 && existingTiles.size === state.length && !reducedMotionQuery.matches;
+
+  if (shouldAnimate) {
+    existingTiles.forEach((tile) => tile.classList.remove("is-sliding"));
+  }
+
+  const firstPositions = shouldAnimate
+    ? new Map([...existingTiles].map(([value, tile]) => [value, tile.getBoundingClientRect()]))
+    : new Map();
+  const fragment = document.createDocumentFragment();
+
   state.forEach((value, index) => {
-    const tile = document.createElement("span");
+    const tile = existingTiles.get(value) || document.createElement("span");
     tile.className = `tile${value === 0 ? " blank" : ""}${index === oldBlank && value !== 0 ? " moved" : ""}`;
+    tile.dataset.value = String(value);
     tile.textContent = value === 0 ? "" : value;
     tile.setAttribute("aria-label", value === 0 ? "blank" : `tile ${value}`);
-    container.append(tile);
+    fragment.append(tile);
+  });
+  container.replaceChildren(fragment);
+
+  if (!shouldAnimate) return;
+  state.forEach((value) => {
+    if (value === 0) return;
+    const tile = existingTiles.get(value);
+    const first = firstPositions.get(value);
+    if (!tile || !first) return;
+    const last = tile.getBoundingClientRect();
+    const offsetX = first.left - last.left;
+    const offsetY = first.top - last.top;
+    if (Math.abs(offsetX) < .5 && Math.abs(offsetY) < .5) return;
+
+    tile.style.setProperty("--tile-offset-x", `${offsetX}px`);
+    tile.style.setProperty("--tile-offset-y", `${offsetY}px`);
+    tile.style.setProperty("--tile-motion-duration", `${duration}ms`);
+    tile.style.setProperty("--tile-motion-easing", boardMotionEasing);
+    tile.classList.add("is-sliding");
+    tile.addEventListener("animationend", () => tile.classList.remove("is-sliding"), { once: true });
   });
 }
 
@@ -166,7 +210,13 @@ function successorBoard(item) {
 
 function renderEvent(event, index = playbackIndex) {
   if (!event) return;
-  renderBoard(elements.currentBoard, event.current, lastRenderedState);
+  const continuesCurrentBranch = event.parent
+    && keyOf(event.parent) === keyOf(lastRenderedState)
+    && isSingleTileSlide(lastRenderedState, event.current);
+  renderBoard(elements.currentBoard, event.current, lastRenderedState, {
+    animate: continuesCurrentBranch,
+    duration: boardMotionDuration(elements.speed.value)
+  });
   lastRenderedState = event.current.slice();
   elements.moveBadge.textContent = event.iteration !== null && event.iteration !== undefined
     ? `Expansion ${index + 1} · limit ${event.iteration}` : `Expansion ${index + 1}`;
@@ -206,8 +256,9 @@ function renderSolutionStep(index) {
   solutionIndex = Math.max(0, Math.min(result.path.length - 1, index));
   const step = result.path[solutionIndex];
   const previous = solutionIndex > 0 ? result.path[solutionIndex - 1].state : null;
-  renderBoard(elements.solutionPlayerBoard, step.state, previous);
-  renderBoard(elements.currentBoard, step.state, lastRenderedState);
+  const duration = boardMotionDuration(elements.solutionSpeed.value);
+  renderBoard(elements.solutionPlayerBoard, step.state, previous, { animate: true, duration });
+  renderBoard(elements.currentBoard, step.state, lastRenderedState, { animate: true, duration });
   lastRenderedState = step.state.slice();
 
   const finalIndex = result.path.length - 1;

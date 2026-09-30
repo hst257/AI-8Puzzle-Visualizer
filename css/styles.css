@@ -194,9 +194,10 @@ fieldset legend, .field-label { margin-bottom: 8px; color: var(--muted); font-si
 .state-card { text-align: center; }
 .state-card > span { display: inline-block; margin-bottom: 11px; color: var(--muted); font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
 .puzzle-board { width: 100%; aspect-ratio: 1; gap: 6px; padding: 7px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
-.puzzle-board .tile { color: var(--ink); background: var(--white); border-radius: 3px; font: 600 clamp(1rem, 2.2vw, 1.7rem) var(--mono); transition: transform .23s ease, background .23s; }
-.puzzle-board .tile.moved { color: var(--white); background: var(--accent); animation: tileMove .3s ease; }
-@keyframes tileMove { 50% { transform: scale(.9); } }
+.puzzle-board .tile { color: var(--ink); background: var(--white); border-radius: 3px; font: 600 clamp(1rem, 2.2vw, 1.7rem) var(--mono); transition: color .23s ease, background .23s ease, border-color .23s ease; }
+.puzzle-board .tile.moved { color: var(--white); background: var(--accent); border-color: var(--accent); }
+.puzzle-board .tile.is-sliding { position: relative; z-index: 2; animation: tileSlide var(--tile-motion-duration, 320ms) var(--tile-motion-easing, cubic-bezier(.22, 1, .36, 1)) both; will-change: transform; }
+@keyframes tileSlide { from { transform: translate3d(var(--tile-offset-x, 0), var(--tile-offset-y, 0), 0); } }
 .puzzle-board.small { gap: 3px; padding: 4px; }
 .puzzle-board.small .tile { font-size: .86rem; }
 .main-state .puzzle-board { box-shadow: 12px 12px 0 var(--accent-soft); }

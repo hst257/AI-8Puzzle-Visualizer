@@ -56,6 +56,21 @@ export function successors(state) {
   });
 }
 
+export function isSingleTileSlide(previous, next) {
+  if (validateState(previous) || validateState(next)) return false;
+  const previousBlank = previous.indexOf(0);
+  const nextBlank = next.indexOf(0);
+  const rowDistance = Math.abs(Math.floor(previousBlank / 3) - Math.floor(nextBlank / 3));
+  const columnDistance = Math.abs((previousBlank % 3) - (nextBlank % 3));
+  if (rowDistance + columnDistance !== 1) return false;
+
+  return previous.every((value, index) => {
+    if (index === previousBlank) return next[index] === previous[nextBlank];
+    if (index === nextBlank) return next[index] === 0;
+    return next[index] === value;
+  });
+}
+
 export function misplacedTiles(state, goal) {
   let score = 0;
   for (let i = 0; i < 9; i += 1) {
