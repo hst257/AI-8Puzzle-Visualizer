@@ -53,6 +53,10 @@ const algorithmInfo = {
   astar: { short: "A*", name: "A* Search", principle: "A priority queue minimizes f(n) = g(n) + h(n).", description: "A* considers both the path already travelled and the estimated distance remaining. With an admissible heuristic, it finds an optimal solution.", time: "O(bᵈ)", space: "O(bᵈ)", complete: "Yes", optimal: "Yes‡", pros: ["Optimal with an admissible heuristic", "Usually expands fewer nodes than BFS"], cons: ["Can consume substantial memory", "Performance depends on heuristic quality"] }
 };
 
+const algorithmOrder = Object.keys(algorithmInfo);
+const algorithmTransitionDuration = 360;
+const algorithmTransitionEasing = "cubic-bezier(.65, 0, .35, 1)";
+
 let result = null;
 let playbackEvents = [];
 let playbackIndex = 0;
@@ -62,6 +66,8 @@ let lastRenderedState = DEFAULT_INITIAL.slice();
 let solutionTimer = null;
 let solutionPlaying = false;
 let solutionIndex = 0;
+let selectedAlgorithm = algorithmOrder[0];
+let algorithmTransitionToken = 0;
 
 function buildInputs(container, values) {
   container.replaceChildren();
@@ -415,14 +421,156 @@ function comparisonRow(row) {
   return `<tr><td data-label="Algorithm">${shortName} <small>${detailName}</small></td><td data-label="Result"><span class="result-chip ${row.found ? "" : "fail"}">${row.found ? "Found" : row.reason === "cutoff" ? "Cutoff" : "Not found"}</span></td><td data-label="Nodes expanded">${row.expanded.toLocaleString()}</td><td data-label="Moves">${row.moves ?? "-"}</td><td data-label="Time">${formatTime(row.timeMs)}</td><td data-label="Memory" title="${formatMemory(row.memoryBytes)}">${memoryClass}</td></tr>`;
 }
 
+function algorithmDetailMarkup(selected) {
+  const info = algorithmInfo[selected];
+  return `
+    <div class="algorithm-detail-page" data-algorithm-page="${selected}">
+      <div class="algorithm-overview"><span class="algo-code">ALGORITHM / ${info.short}</span><h2>${info.name}</h2><p>${info.description}</p></div>
+      <div class="algorithm-facts"><p class="kicker">Working principle</p><p>${info.principle}</p><div class="complexity-grid"><div><span>Time</span><strong>${info.time}</strong></div><div><span>Space</span><strong>${info.space}</strong></div><div><span>Complete</span><strong>${info.complete}</strong></div><div><span>Optimal</span><strong>${info.optimal}</strong></div></div><div class="pros-cons"><div><h3>Advantages</h3><ul>${info.pros.map((item) => `<li>${item}</li>`).join("")}</ul></div><div><h3>Limitations</h3><ul>${info.cons.map((item) => `<li>${item}</li>`).join("")}</ul></div></div><p class="fine-print">* With equal step costs. † With repeated-state checking in a finite graph. ‡ With an admissible, consistent heuristic.</p></div>
+    </div>`;
+}
+
+function moveAlgorithmIndicator(selected) {
+  const tabs = $("#algorithm-tabs");
+  const button = $(`[data-algo="${selected}"]`, tabs);
+  const indicator = $(".algorithm-tab-indicator", tabs);
+  if (!button || !indicator) return;
+
+  indicator.style.width = `${button.offsetWidth}px`;
+  indicator.style.transform = `translate3d(${button.offsetLeft}px, 0, 0)`;
+}
+
+function updateAlgorithmSelection(selected, scroll = false) {
+  const tabs = $("#algorithm-tabs");
+  const button = $(`[data-algo="${selected}"]`, tabs);
+  if (!button) return;
+
+  $$("button", tabs).forEach((tab) => {
+    const active = tab === button;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+  });
+
+  moveAlgorithmIndicator(selected);
+
+  if (scroll && tabs.scrollWidth > tabs.clientWidth) {
+    const left = button.offsetLeft - (tabs.clientWidth - button.offsetWidth) / 2;
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    tabs.scrollTo({ left: Math.max(0, left), behavior });
+  }
+}
+
+async function animateAlgorithmDetail(selected, direction, token) {
+  const detail = $("#algorithm-detail");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const currentPage = $(".algorithm-detail-page:last-child", detail);
+  if (reducedMotion || !currentPage) {
+    detail.innerHTML = algorithmDetailMarkup(selected);
+    detail.dataset.algorithm = selected;
+    detail.setAttribute("aria-labelledby", `algorithm-tab-${selected}`);
+    return true;
+  }
+
+  const template = document.createElement("template");
+  template.innerHTML = algorithmDetailMarkup(selected).trim();
+  const nextPage = template.content.firstElementChild;
+  detail.append(nextPage);
+  detail.dataset.algorithm = selected;
+  detail.setAttribute("aria-labelledby", `algorithm-tab-${selected}`);
+  detail.classList.add("is-transitioning");
+  const distance = direction * 100;
+  const exitAnimation = currentPage.animate([
+    { transform: "translate3d(0, 0, 0)" },
+    { transform: `translate3d(${-distance}%, 0, 0)` }
+  ], { duration: algorithmTransitionDuration, easing: algorithmTransitionEasing, fill: "forwards" });
+  const entryAnimation = nextPage.animate([
+    { transform: `translate3d(${distance}%, 0, 0)` },
+    { transform: "translate3d(0, 0, 0)" }
+  ], { duration: algorithmTransitionDuration, easing: algorithmTransitionEasing, fill: "both" });
+  await Promise.allSettled([exitAnimation.finished, entryAnimation.finished]);
+  if (token !== algorithmTransitionToken) return false;
+
+  currentPage.remove();
+  detail.classList.remove("is-transitioning");
+  return true;
+}
+
+async function transitionAlgorithmInfo(target) {
+  if (!algorithmOrder.includes(target)) return;
+
+  const detail = $("#algorithm-detail");
+  const tabs = $("#algorithm-tabs");
+  tabs.classList.remove("is-transitioning");
+  const token = ++algorithmTransitionToken;
+  const pages = $$(".algorithm-detail-page", detail);
+  pages.flatMap((page) => page.getAnimations()).forEach((animation) => animation.cancel());
+  pages.slice(0, -1).forEach((page) => page.remove());
+  const settledPage = $(".algorithm-detail-page:last-child", detail);
+  if (settledPage) detail.dataset.algorithm = settledPage.dataset.algorithmPage;
+  detail.classList.remove("is-transitioning");
+  selectedAlgorithm = detail.dataset.algorithm || selectedAlgorithm;
+
+  const currentIndex = algorithmOrder.indexOf(selectedAlgorithm);
+  const targetIndex = algorithmOrder.indexOf(target);
+  if (currentIndex === targetIndex) {
+    updateAlgorithmSelection(target);
+    return;
+  }
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const direction = Math.sign(targetIndex - currentIndex);
+  tabs.classList.add("is-transitioning");
+  updateAlgorithmSelection(target, true);
+  try {
+    if (reducedMotion) {
+      selectedAlgorithm = target;
+      detail.innerHTML = algorithmDetailMarkup(target);
+      detail.dataset.algorithm = target;
+      detail.setAttribute("aria-labelledby", `algorithm-tab-${target}`);
+      return;
+    }
+
+    const completed = await animateAlgorithmDetail(target, direction, token);
+    if (!completed) return;
+    selectedAlgorithm = target;
+  } finally {
+    if (token === algorithmTransitionToken) {
+      tabs.classList.remove("is-transitioning");
+      moveAlgorithmIndicator(selectedAlgorithm);
+    }
+  }
+}
+
 function renderAlgorithmInfo(selected = "bfs") {
   const tabs = $("#algorithm-tabs");
-  tabs.innerHTML = Object.entries(algorithmInfo).map(([id, info]) => `<button type="button" data-algo="${id}" class="${id === selected ? "active" : ""}">${info.short}</button>`).join("");
-  const info = algorithmInfo[selected];
-  $("#algorithm-detail").innerHTML = `
-    <div class="algorithm-overview"><span class="algo-code">ALGORITHM / ${info.short}</span><h2>${info.name}</h2><p>${info.description}</p></div>
-    <div class="algorithm-facts"><p class="kicker">Working principle</p><p>${info.principle}</p><div class="complexity-grid"><div><span>Time</span><strong>${info.time}</strong></div><div><span>Space</span><strong>${info.space}</strong></div><div><span>Complete</span><strong>${info.complete}</strong></div><div><span>Optimal</span><strong>${info.optimal}</strong></div></div><div class="pros-cons"><div><h3>Advantages</h3><ul>${info.pros.map((item) => `<li>${item}</li>`).join("")}</ul></div><div><h3>Limitations</h3><ul>${info.cons.map((item) => `<li>${item}</li>`).join("")}</ul></div></div><p class="fine-print">* With equal step costs. † With repeated-state checking in a finite graph. ‡ With an admissible, consistent heuristic.</p></div>`;
-  $$("button", tabs).forEach((button) => button.addEventListener("click", () => renderAlgorithmInfo(button.dataset.algo)));
+  const detail = $("#algorithm-detail");
+  selectedAlgorithm = selected;
+  tabs.setAttribute("role", "tablist");
+  tabs.setAttribute("aria-label", "Search algorithms");
+  tabs.innerHTML = `<span class="algorithm-tab-indicator" aria-hidden="true"></span>${Object.entries(algorithmInfo).map(([id, info]) => `<button type="button" id="algorithm-tab-${id}" role="tab" aria-controls="algorithm-detail" aria-selected="${id === selected}" data-algo="${id}" class="${id === selected ? "active" : ""}">${info.short}</button>`).join("")}`;
+  detail.setAttribute("role", "tabpanel");
+  detail.setAttribute("aria-labelledby", `algorithm-tab-${selected}`);
+  detail.innerHTML = algorithmDetailMarkup(selected);
+  detail.dataset.algorithm = selected;
+  $$("button", tabs).forEach((button) => {
+    button.addEventListener("click", () => transitionAlgorithmInfo(button.dataset.algo));
+    button.addEventListener("keydown", (event) => {
+      const currentIndex = algorithmOrder.indexOf(button.dataset.algo);
+      const nextIndex = event.key === "ArrowRight" ? Math.min(algorithmOrder.length - 1, currentIndex + 1)
+        : event.key === "ArrowLeft" ? Math.max(0, currentIndex - 1)
+          : event.key === "Home" ? 0
+            : event.key === "End" ? algorithmOrder.length - 1
+              : currentIndex;
+      if (nextIndex === currentIndex) return;
+      event.preventDefault();
+      const nextButton = $(`[data-algo="${algorithmOrder[nextIndex]}"]`, tabs);
+      nextButton.focus();
+      transitionAlgorithmInfo(nextButton.dataset.algo);
+    });
+  });
+  requestAnimationFrame(() => updateAlgorithmSelection(selected));
+  window.addEventListener("resize", () => updateAlgorithmSelection(selectedAlgorithm));
 }
 
 function navigate(pageId) {
@@ -432,6 +580,7 @@ function navigate(pageId) {
   $("#main-nav").classList.remove("open");
   $(".nav-toggle").setAttribute("aria-expanded", "false");
   window.scrollTo({ top: 0, behavior: "smooth" });
+  if (target === "learn") requestAnimationFrame(() => updateAlgorithmSelection(selectedAlgorithm));
 }
 
 function setupHeroPressurePlate() {
